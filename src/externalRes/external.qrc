@@ -1,0 +1,6 @@
+<RCC>
+    <qresource prefix="/">
+        <file>materialdesignicons-webfont.ttf</file>
+        <file>ClockIcon48x48.png</file>
+    </qresource>
+</RCC>

@@ -1,0 +1,9 @@
+<RCC>
+    <qresource prefix="/">
+        <file>qmldir</file>
+        <file>main.qml</file>
+        <file>qtquickcontrols2.conf</file>
+        <file>Jsutil.js</file>
+        <file>Style.qml</file>
+    </qresource>
+</RCC>
