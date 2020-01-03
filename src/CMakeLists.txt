@@ -77,6 +77,7 @@ TARGET_LINK_LIBRARIES(
   Qt5::Quick
   Qt5::Qml
   Qt5::Core
+  ${GPIOD_LIB}
   ${CUSTOM_LINK_FLAGS}
   )
 

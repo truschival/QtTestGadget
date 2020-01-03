@@ -26,13 +26,17 @@ ApplicationWindow {
                 Layout.fillWidth: true
             }
         }
-        
+
     Rectangle{
         id: aRectangle;
         color:"green";
         width: 50;
-        height: 30;        
-    }    
+        height: 30;
+    }
+
+    Clock{
+        id: currentTime
+    }
 
     /**** global connections ****/
     Component.onCompleted: {

@@ -25,13 +25,15 @@
 
 #include <cstdio>
 #include <cstdlib>
+#include <fcntl.h>
+#include <linux/gpio.h>
+#include <linux/input-event-codes.h>
+#include <linux/input.h>
 #include <sys/reboot.h>
 #include <sys/stat.h>
 #include <unistd.h>
-#include <fcntl.h>
-#include <linux/input-event-codes.h>
-#include <linux/input.h>
 
+#include <gpiod.h>
 // STD C++
 #include <iostream>
 #include <memory>
@@ -79,17 +81,17 @@ int main(int argc, char* argv[]) {
      */
     if (cmdline.isSet(logfile)) {
         setup_logger_file(cmdline.value(logfile));
-    } else { // Default behavour as before
+    } else {                   // Default behavour as before
         setup_logger_stdout(); // Write log to stdout
     }
     qCInfo(MAIN) << APPLICATION_NAME << " - " << GIT_REVISION;
     qCDebug(MAIN) << "SSL Support: " << QSslSocket::supportsSsl()
                   << QSslSocket::sslLibraryVersionString();
 
-    
+
     int rotary_filehandle = ::open("/dev/input/event1", O_RDONLY);
-    if(rotary_filehandle < 0){
-    	qCWarning(MAIN) << " failed to open/dev/input/event1";
+    if (rotary_filehandle < 0) {
+        qCWarning(MAIN) << " failed to open/dev/input/event1";
     }
 
     QSocketNotifier qsnf(rotary_filehandle, QSocketNotifier::Read);
@@ -109,31 +111,49 @@ int main(int argc, char* argv[]) {
         std::cout << "-" << std::endl;
     });
 
-    int push_button_filehandle = open("/sys/class/gpio/gpio22/value", O_RDONLY);
-    if(push_button_filehandle < 0){
-    	qCWarning(MAIN) << " failed to open push-button GPIO";
+
+    struct gpiochip_info chip_info;
+    auto chip_fd = open("/dev/gpiochip0", O_RDONLY);
+
+    if (chip_fd) {
+        qCWarning(MAIN) << " failed to open push-button GPIO";
     }
-    /* connect notifier and handler for push button */
-    QSocketNotifier button_notifier(
-    		push_button_filehandle, QSocketNotifier::Read);
+    ioctl(chip_fd, GPIO_GET_CHIPINFO_IOCTL, &chip_info);
+    printf("name = %s, label = %s, lines = %d\n", chip_info.name,
+        chip_info.label, chip_info.lines);
+    struct gpioevent_request event_request;
+    event_request.lineoffset = 22;
+    strncpy(event_request.consumer_label, "QtTestGadget",
+        sizeof(event_request.consumer_label));
+    event_request.eventflags = GPIOEVENT_REQUEST_BOTH_EDGES;
+    ioctl(chip_fd, GPIO_GET_LINEEVENT_IOCTL, &event_request);
 
-    QObject::connect(&button_notifier, &QSocketNotifier::activated, [&]() {
-        // disable during read, otherwise QSocketNotifier is triggered again
-        button_notifier.setEnabled(false);
-        char value = 0;
-        lseek(push_button_filehandle, 0, SEEK_SET);
-        auto s = ::read(push_button_filehandle, &value, sizeof(char));
-        std::cout << "pb: " << s << " -" << std::endl;
+    if (event_request.fd <= 0) {
+        qCWarning(MAIN) << "ioctl(chip_fd, GPIO_GET_LINEEVENT_IOCTL) failed ";
+        // return 1;
+    }
 
-        button_notifier.setEnabled(true);
-    });
+    //
+    //
+    //    /* connect notifier and handler for push button */
+    //    QSocketNotifier button_notifier(
+    //    		event_request.fd, QSocketNotifier::Read);
+    //
+    //    QObject::connect(&button_notifier, &QSocketNotifier::activated, [&]()
+    //    {
+    //        // disable during read, otherwise QSocketNotifier is triggered
+    //        again button_notifier.setEnabled(false); struct gpiod_line_event
+    //        evt; gpiod_line_event_read_fd (event_request.fd, &evt); std::cout
+    //        << " PB Event:" << evt.event_type;
+    //        button_notifier.setEnabled(true);
+    //    });
 
 
     QQmlApplicationEngine view;
     QQmlContext* ctxt = view.rootContext();
 
     ctxt->setContextProperty(
-    "DEFAULT_ICON_WIDTH", QVariant::fromValue(DEFAULT_ICON_WIDTH));
+        "DEFAULT_ICON_WIDTH", QVariant::fromValue(DEFAULT_ICON_WIDTH));
 
     view.load(QUrl("qrc:/main.qml"));
 

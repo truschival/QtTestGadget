@@ -65,6 +65,9 @@ FIND_PACKAGE(OpenSSL 1.0.2 REQUIRED)
 FIND_PACKAGE(Qt5 COMPONENTS Core REQUIRED)
 MESSAGE(STATUS "Found Qt5 version: ${Qt5Core_VERSION_STRING}")
 
+find_library(GPIOD_LIB gpiod  DOC "libgpiod2")
+MESSAGE(STATUS "Found library ${GPIOD_LIB}: ${GPIOD_LIB-VERSION} ")
+
 # Instruct CMake to run moc automatically when needed.
 SET(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTOUIC OFF)
